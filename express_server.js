@@ -54,10 +54,9 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
-app.post("/urls/:id/update", (req, res) => {
+app.post("/urls/:id", (req, res) => {
   const siteID = req.params.id;
   urlDatabase[siteID] = `http://${req.body.longURL}`;
-  console.log(urlDatabase);
   res.redirect("/urls");
 });
 
