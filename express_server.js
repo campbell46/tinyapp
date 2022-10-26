@@ -2,6 +2,12 @@ const express = require("express");
 const app = express();
 const PORT = 8080; //default port 8080
 
+const generateRandomString = () => {
+  const randomString = Math.random().toString(32).substring(2, 5) + Math.random().toString(32).substring(2, 5);
+  return randomString;
+};
+
+
 app.set("view engine", "ejs");
 
 const urlDatabase = {
@@ -39,7 +45,7 @@ app.get("/urls/:id", (req, res) => {
 
 app.post("/urls", (req, res) => {
   console.log(req.body);
-  res.send("Ok");
+  res.send(`Ok ${generateRandomString()}`);
 });
 
 app.listen(PORT, () => {
