@@ -57,6 +57,11 @@ app.get("/urls", (req, res) => {
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
+
+  if (req.cookies.user_id === undefined) {
+    return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
+  }
+  
   urlDatabase[shortURL] = `http://${ req.body.longURL }`;
   res.redirect(`/urls/${shortURL}`);
 });
@@ -69,6 +74,11 @@ app.post("/urls/:id/delete", (req, res) => {
 
 app.get("/urls/new", (req, res) => {
   const templateVars = { user: users[req.cookies["user_id"]], urls: urlDatabase, cookies: req.cookies  };
+
+  if (req.cookies.user_id === undefined) {
+    return res.redirect("/login");
+  }
+
   res.render("urls_new", templateVars);
 });
 
@@ -86,8 +96,15 @@ app.post("/urls/:id", (req, res) => {
 
 app.get("/u/:id", (req, res) => {
   const siteID = req.params.id;
-  const longURL = urlDatabase[siteID];
-  res.redirect(longURL);
+
+  for (const url in urlDatabase) {
+    if (url !== siteID) {
+      return res.send("<html><body><h3>Error 404: URL not found</h3></body></html>");
+    }
+  }
+
+  // const longURL = urlDatabase[siteID];
+  // res.redirect(longURL);
 });
 
 app.get("/login", (req, res) => {
@@ -106,12 +123,12 @@ app.post("/login", (req, res) => {
   const getUser = getUserByEmail(userEmail);
 
   if (!getUser) {
-    return res.send('403 status code error: Email not found');
+    return res.send("<html><body><h3>Error 403: Email not found</h3></body></html>");
   }
 
   if (getUser) {
     if (getUser.password !== password) {
-      return res.send('403 status code error: Incorrect password');
+      return res.send("<html><body><h3>Error 403: Incorrect password</h3></body></html>");
     } else {
       res.cookie("user_id", getUser.id);
     }
@@ -141,11 +158,11 @@ app.post('/register', (req, res) => {
   const password = req.body.password;
 
   if (userEmail === "" || password === "") {
-    return res.send('400 status code error: Empty field(s), check email and/or password');
+    return res.send("<html><body><h3>Error 400: Empty field(s), check email and/or password</h3></body></html>");
   }
 
   if (getUserByEmail(userEmail)) {
-    return res.send('400 status code error: Email already exists');
+    return res.send("<html><body><h3>Error 400: Email already exists</h3></body></html>");
   }
 
   users[userID] = {
@@ -154,7 +171,6 @@ app.post('/register', (req, res) => {
     password: password
   };
   res.cookie("user_id", userID);
-  console.log(users);
   res.redirect("/urls");
 });
 
