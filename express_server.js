@@ -22,7 +22,7 @@ const users = {
     id: "user2RandomID",
     email: "user2@example.com",
     password: "dishwasher-funk",
-  }
+  },
 };
 
 const generateRandomString = () => {
@@ -92,6 +92,11 @@ app.get("/u/:id", (req, res) => {
 
 app.get("/login", (req, res) => {
   const templateVars = { user: users[req.cookies["user_id"]], cookies: req.cookies  };
+
+  if (req.cookies.user_id !== undefined) {
+    return res.redirect("/urls");
+  }
+
   res.render("user_login", templateVars);
 });
 
@@ -122,6 +127,11 @@ app.post("/logout", (req, res) => {
 
 app.get('/register', (req, res) => {
   const templateVars = { user: users[req.cookies["user_id"]], cookies: req.cookies };
+  
+  if (req.cookies.user_id !== undefined) {
+    return res.redirect("/urls");
+  }
+
   res.render("user_registration", templateVars);
 });
 
