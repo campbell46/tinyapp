@@ -8,8 +8,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com",
+  "b2xVn2":  {
+    longURL: "http://www.lighthouselabs.ca",
+    userID: "userRandomID",
+  },
+  "9sm5xK": {
+    longURL: "http://www.google.com",
+    userID: "user2RandomID",
+  }
 };
 
 const users = {
@@ -51,18 +57,19 @@ app.get('/hello', (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]], urls: urlDatabase, cookies: req.cookies };
+  const templateVars = { user: users[req.cookies["user_id"]], urls: urlDatabase };
   res.render("urls_index", templateVars);
 });
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
+  const id = req.cookies.user_id;
 
-  if (req.cookies.user_id === undefined) {
+  if (!id || id === undefined) {
     return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
   }
   
-  urlDatabase[shortURL] = `http://${ req.body.longURL }`;
+  urlDatabase[shortURL] = { longURL: `http://${ req.body.longURL }`, userID: id };
   res.redirect(`/urls/${shortURL}`);
 });
 
@@ -73,9 +80,9 @@ app.post("/urls/:id/delete", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]], urls: urlDatabase, cookies: req.cookies  };
+  const templateVars = { user: users[req.cookies["user_id"]] };
 
-  if (req.cookies.user_id === undefined) {
+  if (!templateVars.user) {
     return res.redirect("/login");
   }
 
@@ -84,33 +91,38 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:id", (req, res) => {
   const siteID = req.params.id;
-  const templateVars = { user: users[req.cookies["user_id"]], id: siteID, longURL: urlDatabase[siteID], cookies: req.cookies };
+  const templateVars = { user: users[req.cookies["user_id"]], id: siteID, urls: urlDatabase[siteID] };
   res.render("urls_show", templateVars);
 });
-
+////////////////////////
 app.post("/urls/:id", (req, res) => {
   const siteID = req.params.id;
-  urlDatabase[siteID] = `http://${req.body.longURL}`;
+  const id = req.cookies.user_id;
+
+  if (!id) {
+    return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
+  }
+
+  urlDatabase[siteID].longURL = `http://${req.body.longURL}`;
   res.redirect("/urls");
 });
 
 app.get("/u/:id", (req, res) => {
   const siteID = req.params.id;
 
-  for (const url in urlDatabase) {
-    if (url !== siteID) {
-      return res.send("<html><body><h3>Error 404: URL not found</h3></body></html>");
-    }
+  if (!urlDatabase[siteID]) {
+    return res.send("<html><body><h3>Error 404: URL does not exist</h3></body></html>");
   }
 
-  // const longURL = urlDatabase[siteID];
-  // res.redirect(longURL);
+  const longURL = urlDatabase[siteID].longURL;
+  res.redirect(longURL);
 });
 
 app.get("/login", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]], cookies: req.cookies  };
+  const userID = req.cookies["user_id"];
+  const templateVars = { user: userID, cookies: req.cookies  };
 
-  if (req.cookies.user_id !== undefined) {
+  if (userID !== undefined) {
     return res.redirect("/urls");
   }
 
