@@ -22,11 +22,6 @@ const users = {
     id: "user2RandomID",
     email: "user2@example.com",
     password: "dishwasher-funk",
-  },
-  123456: {
-    id: 123456,
-    email: "sarah@sarah.sarah",
-    pasword: "sarah",
   }
 };
 
@@ -38,10 +33,9 @@ const generateRandomString = () => {
 const getUserByEmail = (userEmail) => {
   for (const user in users) {
     if (users[user].email === userEmail) {
-      return true;
+      return users[user];
     }
   }
-  return false;
 };
 
 app.get("/", (req, res) => {
@@ -97,16 +91,33 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  res.redirect("/login");
+  const templateVars = { user: users[req.cookies["user_id"]], cookies: req.cookies  };
+  res.render("user_login", templateVars);
 });
 
 app.post("/login", (req, res) => {
+  const userEmail = req.body.email;
+  const password = req.body.password;
+  const getUser = getUserByEmail(userEmail);
+
+  if (!getUser) {
+    return res.send('403 status code error: Email not found');
+  }
+
+  if (getUser) {
+    if (getUser.password !== password) {
+      return res.send('403 status code error: Incorrect password');
+    } else {
+      res.cookie("user_id", getUser.id);
+    }
+  }
+
   res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
-  res.redirect("/urls");
+  res.redirect("/login");
 });
 
 app.get('/register', (req, res) => {
@@ -133,6 +144,7 @@ app.post('/register', (req, res) => {
     password: password
   };
   res.cookie("user_id", userID);
+  console.log(users);
   res.redirect("/urls");
 });
 
