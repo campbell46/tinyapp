@@ -96,6 +96,10 @@ app.get("/u/:id", (req, res) => {
   res.redirect(longURL);
 });
 
+app.get("/login", (req, res) => {
+  res.redirect("/login");
+});
+
 app.post("/login", (req, res) => {
   res.redirect("/urls");
 });
