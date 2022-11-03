@@ -1,17 +1,32 @@
+////////////////////////////////////////
+// REQUIREMENTS
+////////////////////////////////////////
 const express = require("express");
 const cookieSession = require('cookie-session');
 const bcrypt = require("bcryptjs");
 
+////////////////////////////////////////
+// CONFIGURATION
+////////////////////////////////////////
 const app = express();
 const PORT = 8080; //default port 8080
 
 app.set("view engine", "ejs");
+
+////////////////////////////////////////
+// MIDDLEWARE
+////////////////////////////////////////
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieSession({
   name: 'session',
-  keys: [ 'key'[0] ]
+  keys: ['key', 'key2'],
+  //Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
 
+////////////////////////////////////////
+// DATA
+////////////////////////////////////////
 const urlDatabase = {
   "b2xVn2":  {
     longURL: "http://www.lighthouselabs.ca",
@@ -36,6 +51,9 @@ const users = {
   },
 };
 
+////////////////////////////////////////
+// FUNCTIONS
+////////////////////////////////////////
 const generateRandomString = () => {
   const randomNum = Math.random().toString(16);
   return randomNum.substring(2, 8);
@@ -59,6 +77,9 @@ const urlsForUser = (user) => {
   return userURLs;
 };
 
+////////////////////////////////////////
+// GET - ROUTE HANDLER
+////////////////////////////////////////
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
@@ -79,38 +100,6 @@ app.get("/urls", (req, res) => {
   }
 
   res.render("urls_index", templateVars);
-});
-
-app.post("/urls", (req, res) => {
-  const shortURL = generateRandomString();
-  const id = req.session['user_id'];
-
-  if (!id || id === undefined) {
-    return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
-  }
-  
-  urlDatabase[shortURL] = { longURL: `http://${ req.body.longURL }`, userID: id };
-  res.redirect(`/urls/${shortURL}`);
-});
-//////////////
-app.post("/urls/:id/delete", (req, res) => {
-  const siteID = req.params.id;
-  const id = req.session['user_id'];
-
-  if (!urlDatabase[siteID]) {
-    return res.send("<html><body><h3>Error 401: URL does not exist</h3></body></html>");
-  }
-
-  if (!id) {
-    return res.send("<html><body><h3>Error 401: Must be logged in to delete URL's</h3></body></html>");
-  }
-
-  if (id !== urlDatabase[siteID].userID) {
-    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
-  }
-
-  delete urlDatabase[siteID];
-  res.redirect("/urls");
 });
 
 app.get("/urls/new", (req, res) => {
@@ -142,26 +131,6 @@ app.get("/urls/:id", (req, res) => {
 
   res.render("urls_show", templateVars);
 });
-////////////////////////
-app.post("/urls/:id/update", (req, res) => {
-  const siteID = req.params.id;
-  const id = req.session['user_id'];
-
-  if (!id) {
-    return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
-  }
-
-  if (!urlDatabase[siteID]) {
-    return res.send("<html><body><h3>Error 404: URL does not exist</h3></body></html>");
-  }
-
-  if (id !== urlDatabase[siteID].userID || !id) {
-    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
-  }
-
-  urlDatabase[siteID].longURL = `http://${req.body.longURL}`;
-  res.redirect("/urls");
-});
 
 app.get("/u/:id", (req, res) => {
   const siteID = req.params.id;
@@ -183,6 +152,71 @@ app.get("/login", (req, res) => {
   }
 
   res.render("user_login", templateVars);
+});
+
+app.get('/register', (req, res) => {
+  const templateVars = { user: users[req.session['user-id']], sessions: req.sessions };
+  
+  if (req.session['user-id']) {
+    return res.redirect("/urls");
+  }
+
+  res.render("user_registration", templateVars);
+});
+
+////////////////////////////////////////
+// POST - ROUTE HANDLER
+////////////////////////////////////////
+app.post("/urls", (req, res) => {
+  const shortURL = generateRandomString();
+  const id = req.session['user_id'];
+
+  if (!id || id === undefined) {
+    return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
+  }
+  
+  urlDatabase[shortURL] = { longURL: `http://${ req.body.longURL }`, userID: id };
+  res.redirect(`/urls/${shortURL}`);
+});
+
+app.post("/urls/:id/delete", (req, res) => {
+  const siteID = req.params.id;
+  const id = req.session['user_id'];
+
+  if (!urlDatabase[siteID]) {
+    return res.send("<html><body><h3>Error 401: URL does not exist</h3></body></html>");
+  }
+
+  if (!id) {
+    return res.send("<html><body><h3>Error 401: Must be logged in to delete URL's</h3></body></html>");
+  }
+
+  if (id !== urlDatabase[siteID].userID) {
+    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
+  }
+
+  delete urlDatabase[siteID];
+  res.redirect("/urls");
+});
+
+app.post("/urls/:id/update", (req, res) => {
+  const siteID = req.params.id;
+  const id = req.session['user_id'];
+
+  if (!id) {
+    return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
+  }
+
+  if (!urlDatabase[siteID]) {
+    return res.send("<html><body><h3>Error 404: URL does not exist</h3></body></html>");
+  }
+
+  if (id !== urlDatabase[siteID].userID || !id) {
+    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
+  }
+
+  urlDatabase[siteID].longURL = `http://${req.body.longURL}`;
+  res.redirect("/urls");
 });
 
 app.post("/login", (req, res) => {
@@ -209,16 +243,6 @@ app.post("/logout", (req, res) => {
   res.redirect("/login");
 });
 
-app.get('/register', (req, res) => {
-  const templateVars = { user: users[req.session['user-id']], sessions: req.sessions };
-  
-  if (req.session['user-id']) {
-    return res.redirect("/urls");
-  }
-
-  res.render("user_registration", templateVars);
-});
-
 app.post('/register', (req, res) => {
   const userID = generateRandomString();
   const userEmail = req.body.email;
@@ -239,10 +263,12 @@ app.post('/register', (req, res) => {
     password: hashedPassword,
   };
   req.session['user_id'] = userID;
-  console.log(req.session, req.session.sig);
   res.redirect("/urls");
 });
 
+////////////////////////////////////////
+// LISTENER
+////////////////////////////////////////
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
