@@ -5,6 +5,7 @@ const express = require("express");
 const cookieSession = require('cookie-session');
 const bcrypt = require("bcryptjs");
 const { getUserByEmail } = require("./helpers");
+const methodOverride = require('method-override');
 
 ////////////////////////////////////////
 // CONFIGURATION
@@ -24,6 +25,7 @@ app.use(cookieSession({
   //Cookie Options
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
+app.use(methodOverride('_method'));
 
 ////////////////////////////////////////
 // DATA
@@ -172,46 +174,6 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
-app.post("/urls/:id/delete", (req, res) => {
-  const siteID = req.params.id;
-  const id = req.session['user_id'];
-
-  if (!urlDatabase[siteID]) {
-    return res.send("<html><body><h3>Error 401: URL does not exist</h3></body></html>");
-  }
-
-  if (!id) {
-    return res.send("<html><body><h3>Error 401: Must be logged in to delete URL's</h3></body></html>");
-  }
-
-  if (id !== urlDatabase[siteID].userID) {
-    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
-  }
-
-  delete urlDatabase[siteID];
-  res.redirect("/urls");
-});
-
-app.post("/urls/:id/update", (req, res) => {
-  const siteID = req.params.id;
-  const id = req.session['user_id'];
-
-  if (!id) {
-    return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
-  }
-
-  if (!urlDatabase[siteID]) {
-    return res.send("<html><body><h3>Error 404: URL does not exist</h3></body></html>");
-  }
-
-  if (id !== urlDatabase[siteID].userID || !id) {
-    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
-  }
-
-  urlDatabase[siteID].longURL = `http://${req.body.longURL}`;
-  res.redirect("/urls");
-});
-
 app.post("/login", (req, res) => {
   const userEmail = req.body.email;
   const password = req.body.password;
@@ -256,6 +218,52 @@ app.post('/register', (req, res) => {
     password: hashedPassword,
   };
   req.session['user_id'] = userID;
+  res.redirect("/urls");
+});
+
+////////////////////////////////////////
+// PUT - ROUTE HANDLER
+////////////////////////////////////////
+app.put("/urls/:id/update", (req, res) => {
+  const siteID = req.params.id;
+  const id = req.session['user_id'];
+
+  if (!id) {
+    return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
+  }
+
+  if (!urlDatabase[siteID]) {
+    return res.send("<html><body><h3>Error 404: URL does not exist</h3></body></html>");
+  }
+
+  if (id !== urlDatabase[siteID].userID || !id) {
+    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
+  }
+
+  urlDatabase[siteID].longURL = `http://${req.body.longURL}`;
+  res.redirect("/urls");
+});
+
+////////////////////////////////////////
+// DELETE - ROUTE HANDLER
+////////////////////////////////////////
+app.delete("/urls/:id/delete", (req, res) => {
+  const siteID = req.params.id;
+  const id = req.session['user_id'];
+
+  if (!urlDatabase[siteID]) {
+    return res.send("<html><body><h3>Error 401: URL does not exist</h3></body></html>");
+  }
+
+  if (!id) {
+    return res.send("<html><body><h3>Error 401: Must be logged in to delete URL's</h3></body></html>");
+  }
+
+  if (id !== urlDatabase[siteID].userID) {
+    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
+  }
+
+  delete urlDatabase[siteID];
   res.redirect("/urls");
 });
 
