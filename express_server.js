@@ -4,6 +4,7 @@
 const express = require("express");
 const cookieSession = require('cookie-session');
 const bcrypt = require("bcryptjs");
+const { getUserByEmail } = require("./helpers");
 
 ////////////////////////////////////////
 // CONFIGURATION
@@ -57,14 +58,6 @@ const users = {
 const generateRandomString = () => {
   const randomNum = Math.random().toString(16);
   return randomNum.substring(2, 8);
-};
-
-const getUserByEmail = (userEmail) => {
-  for (const user in users) {
-    if (users[user].email === userEmail) {
-      return users[user];
-    }
-  }
 };
 
 const urlsForUser = (user) => {
@@ -222,7 +215,7 @@ app.post("/urls/:id/update", (req, res) => {
 app.post("/login", (req, res) => {
   const userEmail = req.body.email;
   const password = req.body.password;
-  const user = getUserByEmail(userEmail);
+  const user = getUserByEmail(userEmail, users);
 
   if (!user) {
     return res.send("<html><body><h3>Error 403: Email not found</h3></body></html>");
@@ -253,7 +246,7 @@ app.post('/register', (req, res) => {
     return res.send("<html><body><h3>Error 400: Empty field(s), check email and/or password</h3></body></html>");
   }
 
-  if (getUserByEmail(userEmail)) {
+  if (getUserByEmail(userEmail, users)) {
     return res.send("<html><body><h3>Error 400: Email already exists</h3></body></html>");
   }
 
