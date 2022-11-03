@@ -4,7 +4,7 @@
 const express = require("express");
 const cookieSession = require('cookie-session');
 const bcrypt = require("bcryptjs");
-const { getUserByEmail } = require("./helpers");
+const { getUserByEmail, generateRandomString, urlsForUser } = require("./helpers");
 const methodOverride = require('method-override');
 
 ////////////////////////////////////////
@@ -22,8 +22,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieSession({
   name: 'session',
   keys: ['key', 'key2'],
-  //Cookie Options
-  maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
 app.use(methodOverride('_method'));
 
@@ -55,91 +53,78 @@ const users = {
 };
 
 ////////////////////////////////////////
-// FUNCTIONS
-////////////////////////////////////////
-const generateRandomString = () => {
-  const randomNum = Math.random().toString(16);
-  return randomNum.substring(2, 8);
-};
-
-const urlsForUser = (user) => {
-  const userURLs = {};
-  for (const url in urlDatabase) {
-    if (urlDatabase[url].userID === user) {
-      userURLs[url] = urlDatabase[url].longURL;
-    }
-  }
-  return userURLs;
-};
-
-////////////////////////////////////////
 // GET - ROUTE HANDLER
 ////////////////////////////////////////
+//redirect to url page if logged in
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  const userID = req.session['user_id'];
+
+  if (!userID) { //user not logged in
+    res.redirect("/login");
+  }
+  res.redirect("/urls");
 });
 
-app.get('/urls.json', (req, res) => {
-  res.json(urlDatabase);
-});
-
-app.get('/hello', (req, res) => {
-  res.send('<html><body>Hello <b>World</b></body></html>\n');
-});
-
+//render index page displaying users urls
 app.get("/urls", (req, res) => {
-  const templateVars = { user: users[req.session['user_id']], urls: urlsForUser(req.session['user_id']) };
+  const user = req.session['user_id'];
+  const templateVars = { user: users[user], urls: urlsForUser(user, urlDatabase) };
   
-  if (!templateVars.user) {
-    return res.send("<html><body><h3>Error 401: Must be logged in to view URL's</h3></body></html>");
+  if (!templateVars.user) { //user not logged in
+    return res.status(401).send("<html><body><h3>Error: Must be logged in to view URL's</h3></body></html>");
   }
 
   res.render("urls_index", templateVars);
 });
 
+//render new url template
 app.get("/urls/new", (req, res) => {
   const templateVars = { user: users[req.session['user_id']] };
 
-  if (!templateVars.user) {
+  if (!templateVars.user) { ////user not logged in
     return res.redirect("/login");
   }
 
   res.render("urls_new", templateVars);
 });
 
+//render url id page
 app.get("/urls/:id", (req, res) => {
   const siteID = req.params.id;
-  const templateVars = { user: users[req.session['user_id']], id: siteID, urls: urlDatabase[siteID] };
+  const user = users[req.session['user_id']];
+  const templateVars = { user: user, id: siteID, urls: urlDatabase[siteID] };
 
 
-  if (!templateVars.user.id) {
-    return res.send("<html><body><h3>Error 401: Must be logged in to view URL's</h3></body></html>");
+  if (!user) { //user not logged in
+    return res.status(401).send("<html><body><h3>Error: Must be logged in to view URL's</h3></body></html>");
   }
 
-  if (!urlDatabase[siteID]) {
-    return res.send("<html><body><h3>Error 404: URL does not exist</h3></body></html>");
+  if (!urlDatabase[siteID]) { //url is not in database
+    return res.status(404).send("<html><body><h3>Error: URL does not exist</h3></body></html>");
   }
 
-  if (templateVars.user.id !== urlDatabase[siteID].userID || !templateVars.user.id) {
-    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
+  if (templateVars.user.id !== urlDatabase[siteID].userID) { //not users url
+    return res.status(403).send("<html><body><h3>Error: This URL does not belong to you</h3></body></html>");
   }
 
   res.render("urls_show", templateVars);
 });
 
+//redirect to external url page
 app.get("/u/:id", (req, res) => {
   const siteID = req.params.id;
 
-  if (!urlDatabase[siteID]) {
-    return res.send("<html><body><h3>Error 404: URL does not exist</h3></body></html>");
+  if (!urlDatabase[siteID]) { //url not in database
+    return res.status(404).send("<html><body><h3>Error: URL does not exist</h3></body></html>");
   }
 
   const longURL = urlDatabase[siteID].longURL;
   res.redirect(longURL);
 });
 
+//render login template, redirect to urls if logged in
 app.get("/login", (req, res) => {
-  const userID = req.session['user-id'];
+  const userID = req.session['user_id'];
   const templateVars = { user: userID, session: req.session  };
 
   if (userID) {
@@ -149,10 +134,11 @@ app.get("/login", (req, res) => {
   res.render("user_login", templateVars);
 });
 
+//render registration template, redirect to urls if logged in
 app.get('/register', (req, res) => {
-  const templateVars = { user: users[req.session['user-id']], sessions: req.sessions };
+  const templateVars = { user: users[req.session['user_id']], sessions: req.sessions };
   
-  if (req.session['user-id']) {
+  if (req.session['user_id']) {
     return res.redirect("/urls");
   }
 
@@ -162,56 +148,58 @@ app.get('/register', (req, res) => {
 ////////////////////////////////////////
 // POST - ROUTE HANDLER
 ////////////////////////////////////////
+//create new url, add to url database, redirect to short url page
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
   const id = req.session['user_id'];
 
-  if (!id || id === undefined) {
-    return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
+  if (!id || id === undefined) { //user not logged in
+    return res.status(401).send("<html><body><h3>Error: Must be logged in to shorten URL's</h3></body></html>");
   }
   
   urlDatabase[shortURL] = { longURL: `http://${ req.body.longURL }`, userID: id };
   res.redirect(`/urls/${shortURL}`);
 });
 
+//login to account, verify email is in database, verify password
 app.post("/login", (req, res) => {
   const userEmail = req.body.email;
   const password = req.body.password;
   const user = getUserByEmail(userEmail, users);
 
-  if (!user) {
-    return res.send("<html><body><h3>Error 403: Email not found</h3></body></html>");
+  if (!user) { //email not in database
+    return res.status(400).send("<html><body><h3>Error: Email not found</h3></body></html>");
   }
 
-  if (!bcrypt.compareSync(password, user.password)) {
-    res.status(403);
-    res.send('Incorrect password\n<button onclick="history.back()">Back</button>');
-    return;
+  if (!bcrypt.compareSync(password, user.password)) { //passwords do not match
+    return res.status(400).send("<html><body><h3>Error: Password is incorrect</h3></body></html>");
   }
   
   req.session['user_id'] = user.id;
   res.redirect("/urls");
 });
 
+//logout and clear session
 app.post("/logout", (req, res) => {
   req.session = null;
   res.redirect("/login");
 });
 
+//register an account, add it to user database
 app.post('/register', (req, res) => {
   const userID = generateRandomString();
   const userEmail = req.body.email;
   const password = req.body.password;
   const hashedPassword = bcrypt.hashSync(password, 10);
 
-  if (userEmail === "" || password === "") {
-    return res.send("<html><body><h3>Error 400: Empty field(s), check email and/or password</h3></body></html>");
+  if (userEmail === "" || password === "") { //blank fields found
+    return res.status(400).send("<html><body><h3>Error: Empty field(s), check email and/or password</h3></body></html>");
   }
 
-  if (getUserByEmail(userEmail, users)) {
-    return res.send("<html><body><h3>Error 400: Email already exists</h3></body></html>");
+  if (getUserByEmail(userEmail, users)) { //user already exists
+    return res.status(400).send("<html><body><h3>Error: Email already exists</h3></body></html>");
   }
-
+  
   users[userID] = {
     id: userID,
     email: userEmail,
@@ -224,20 +212,21 @@ app.post('/register', (req, res) => {
 ////////////////////////////////////////
 // PUT - ROUTE HANDLER
 ////////////////////////////////////////
-app.put("/urls/:id/update", (req, res) => {
+//update long url, redirect to url page
+app.put("/urls/:id", (req, res) => {
   const siteID = req.params.id;
   const id = req.session['user_id'];
 
-  if (!id) {
-    return res.send("<html><body><h3>Error 401: Must be logged in to shorten URL's</h3></body></html>");
+  if (!id) { //user not logged in
+    return res.status(401).send("<html><body><h3>Error: Must be logged in to shorten URL's</h3></body></html>");
   }
 
-  if (!urlDatabase[siteID]) {
-    return res.send("<html><body><h3>Error 404: URL does not exist</h3></body></html>");
+  if (!urlDatabase[siteID]) { //url does not exist
+    return res.status(404).send("<html><body><h3>Error: URL does not exist</h3></body></html>");
   }
 
-  if (id !== urlDatabase[siteID].userID || !id) {
-    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
+  if (id !== urlDatabase[siteID].userID) { //not users url
+    return res.status(403).send("<html><body><h3>Error: This URL does not belong to you</h3></body></html>");
   }
 
   urlDatabase[siteID].longURL = `http://${req.body.longURL}`;
@@ -247,20 +236,21 @@ app.put("/urls/:id/update", (req, res) => {
 ////////////////////////////////////////
 // DELETE - ROUTE HANDLER
 ////////////////////////////////////////
+//delete short url from database
 app.delete("/urls/:id/delete", (req, res) => {
   const siteID = req.params.id;
   const id = req.session['user_id'];
 
-  if (!urlDatabase[siteID]) {
-    return res.send("<html><body><h3>Error 401: URL does not exist</h3></body></html>");
+  if (!urlDatabase[siteID]) { //url does not exist
+    return res.status(404).send("<html><body><h3>Error: URL does not exist</h3></body></html>");
   }
 
-  if (!id) {
-    return res.send("<html><body><h3>Error 401: Must be logged in to delete URL's</h3></body></html>");
+  if (!id) { //user not logged in
+    return res.status(401).send("<html><body><h3>Error: Must be logged in to delete URL's</h3></body></html>");
   }
 
-  if (id !== urlDatabase[siteID].userID) {
-    return res.send("<html><body><h3>Error 401: This URL does not belong to you</h3></body></html>");
+  if (id !== urlDatabase[siteID].userID) { //not users url
+    return res.status(403).send("<html><body><h3>Error: This URL does not belong to you</h3></body></html>");
   }
 
   delete urlDatabase[siteID];
