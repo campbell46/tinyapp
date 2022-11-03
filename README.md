@@ -13,11 +13,12 @@ This project was created and published by me as part of my learnings at Lighthou
 ### Installation
 
 * Fork and clone this repository
+* Install all dependencies(`npm install`)
+* Initialize web server from command-line with:
+  `npm start`
+* localhost:8080/ to connect to server from browser
   * IP address: localhost (127.0.0.1)
   * PORT: 8080
-  * initialize web server from command-line with:
-  - npm start
-  - localhost:8080/ to connect to server from browser
 
 ### Final Product
 
@@ -25,8 +26,11 @@ This project was created and published by me as part of my learnings at Lighthou
 !["screenshot of url index page"](assets/url_index.png)
 !["screenshot of url info page"](assets/url_show.png)
 
-### Built With
+### Dependencies
 
-[![Bootstrap][Bootstrap.com]][Bootstrap-url]
-[![Node][Node.js]][Node-url]
-[![Express][Express.ejs]][Bootstrap-url]
+* Node.js
+* Express
+* EJS
+* bcryptjs
+* cookie-session
+* method-override
