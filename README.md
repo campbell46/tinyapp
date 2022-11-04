@@ -10,6 +10,12 @@ Users can start by creating an account, once logged in they can view, create, up
 
 This project was created and published by me as part of my learnings at Lighthouse Labs.
 
+## Final Product
+
+!["screenshot of registration page"](https://github.com/campbell46/tinyapp/blob/main/assets/register.png?raw=true)
+!["screenshot of url index page"](https://github.com/campbell46/tinyapp/blob/main/assets/url_index.png?raw=true)
+!["screenshot of url info page"](https://github.com/campbell46/tinyapp/blob/main/assets/url_show.png?raw=true)
+
 ## Installation
 
 * Fork and clone this repository
@@ -19,12 +25,6 @@ This project was created and published by me as part of my learnings at Lighthou
 * localhost:8080/ to connect to server from browser
   * IP address: localhost (127.0.0.1)
   * PORT: 8080
-
-## Final Product
-
-!["screenshot of registration page"](assets/register.png)
-!["screenshot of url index page"](assets/url_index.png)
-!["screenshot of url info page"](assets/url_show.png)
 
 ## Dependencies
 
