@@ -12,8 +12,16 @@ This project was created and published by me as part of my learnings at Lighthou
 
 ## Final Product
 
+Screenshot of the user registration page:
+
 !["screenshot of registration page"](https://github.com/campbell46/tinyapp/blob/main/assets/register.png?raw=true)
+
+Screenshot of the users URL's page:
+
 !["screenshot of url index page"](https://github.com/campbell46/tinyapp/blob/main/assets/url_index.png?raw=true)
+
+Screenshot of the users URL info page:
+
 !["screenshot of url info page"](https://github.com/campbell46/tinyapp/blob/main/assets/url_show.png?raw=true)
 
 ## Installation
