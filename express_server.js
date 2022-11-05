@@ -5,6 +5,7 @@ const express = require("express");
 const cookieSession = require('cookie-session');
 const bcrypt = require("bcryptjs");
 const { getUserByEmail, generateRandomString, urlsForUser } = require("./helpers");
+const { urlDatabase, users } = require("./database");
 const methodOverride = require('method-override');
 
 ////////////////////////////////////////
@@ -26,33 +27,6 @@ app.use(cookieSession({
 app.use(methodOverride('_method'));
 
 ////////////////////////////////////////
-// DATA
-////////////////////////////////////////
-const urlDatabase = {
-  "b2xVn2":  {
-    longURL: "http://www.lighthouselabs.ca",
-    userID: "userRandomID",
-  },
-  "9sm5xK": {
-    longURL: "http://www.google.com",
-    userID: "user2RandomID",
-  }
-};
-
-const users = {
-  userRandomID: {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur",
-  },
-  user2RandomID: {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk",
-  },
-};
-
-////////////////////////////////////////
 // GET - ROUTE HANDLER
 ////////////////////////////////////////
 //redirect to url page if logged in
@@ -60,7 +34,7 @@ app.get("/", (req, res) => {
   const userID = req.session['user_id'];
 
   if (!userID) { //user not logged in
-    res.redirect("/login");
+    return res.redirect("/login");
   }
   res.redirect("/urls");
 });
@@ -113,12 +87,16 @@ app.get("/urls/:id", (req, res) => {
 //redirect to external url page
 app.get("/u/:id", (req, res) => {
   const siteID = req.params.id;
+  let longURL = urlDatabase[siteID].longURL;
+
+  if (!urlDatabase[siteID].longURL.startsWith("http://") || !urlDatabase[siteID].longURL.startsWith("https://")) {
+    longURL = `https://${longURL}`;
+  }
 
   if (!urlDatabase[siteID]) { //url not in database
     return res.status(404).send("<html><body><h3>Error: URL does not exist</h3></body></html>");
   }
 
-  const longURL = urlDatabase[siteID].longURL;
   res.redirect(longURL);
 });
 
@@ -157,7 +135,7 @@ app.post("/urls", (req, res) => {
     return res.status(401).send("<html><body><h3>Error: Must be logged in to shorten URL's</h3></body></html>");
   }
   
-  urlDatabase[shortURL] = { longURL: `http://${ req.body.longURL }`, userID: id };
+  urlDatabase[shortURL] = { longURL: req.body.longURL, userID: id };
   res.redirect(`/urls/${shortURL}`);
 });
 
@@ -229,7 +207,7 @@ app.put("/urls/:id", (req, res) => {
     return res.status(403).send("<html><body><h3>Error: This URL does not belong to you</h3></body></html>");
   }
 
-  urlDatabase[siteID].longURL = `http://${req.body.longURL}`;
+  urlDatabase[siteID].longURL = req.body.longURL;
   res.redirect("/urls");
 });
 
