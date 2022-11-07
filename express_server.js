@@ -89,14 +89,11 @@ app.get("/u/:id", (req, res) => {
   const siteID = req.params.id;
   let longURL = urlDatabase[siteID].longURL;
 
-  if (!urlDatabase[siteID].longURL.startsWith("http://") || !urlDatabase[siteID].longURL.startsWith("https://")) {
+  if (!urlDatabase[siteID].longURL.startsWith("http://") && !urlDatabase[siteID].longURL.startsWith("https://")) {
     longURL = `https://${longURL}`;
-  }
-
-  if (!urlDatabase[siteID]) { //url not in database
+  }  if (!urlDatabase[siteID]) { //url not in database
     return res.status(404).send("<html><body><h3>Error: URL does not exist</h3></body></html>");
   }
-
   res.redirect(longURL);
 });
 
